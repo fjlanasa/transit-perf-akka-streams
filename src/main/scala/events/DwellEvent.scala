@@ -7,22 +7,22 @@ object DwellEvent {
   case class Update(event: StopStatusEvent.Event, replyTo: ActorRef[DwellEvent.Result])
 
   trait Result
-  case class Event(arrival: StopStatusEvent.ParsedVehiclePosition, departure: StopStatusEvent.ParsedVehiclePosition) extends Result
+  case class Event(arrival: StopStatusEvent.Event, departure: StopStatusEvent.Event) extends Result
   case object Noop extends Result
 
   def apply(): Behavior[Update] = {
     handle()
   }
 
-  def handle(state: Map[(String, String, String), StopStatusEvent.ParsedVehiclePosition] = Map()): Behavior[Update] = {
+  def handle(state: Map[(String, String, String), StopStatusEvent.Event] = Map()): Behavior[Update] = {
     Behaviors.receiveMessage { message =>
       message match {
         case Update(event: StopStatusEvent.Arrival, replyTo) =>
-          val vp = event.vehiclePosition
+          val vp = event
           replyTo ! Noop
-          handle(state + ((vp.vehicleId, vp.stopId, vp.tripId) -> event.vehiclePosition))
+          handle(state + ((vp.vehicleId, vp.stopId, vp.tripId) -> event))
         case Update(event: StopStatusEvent.Departure, replyTo) =>
-          val currentVP = event.vehiclePosition
+          val currentVP = event
           val previousVP = state.get(getKey(currentVP))
           previousVP match {
             case Some(vp) =>
@@ -30,12 +30,12 @@ object DwellEvent {
               handle(state - getKey(currentVP))
             case _ =>
               replyTo ! Noop
+              handle(state)
           }
 
       }
-      Behaviors.same
     }
   }
 
-  private def getKey(vp: StopStatusEvent.ParsedVehiclePosition): (String, String, String) = (vp.vehicleId, vp.stopId, vp.tripId)
+  private def getKey(vp: StopStatusEvent.Departure): (String, String, String) = (vp.vehicleId, vp.stopId, vp.tripId)
 }
