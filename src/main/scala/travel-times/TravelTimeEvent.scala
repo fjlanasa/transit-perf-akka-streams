@@ -1,11 +1,11 @@
-package events
+package traveltime
 
 import akka.actor.ActorRef
+
+import stopstatus.StopStatusEvent
 
 object TravelTimeEvent {
   case class Update(event: StopStatusEvent.Event, replyTo: ActorRef)
 
-  trait Result
-  case class Event() extends Result
-  case object Noop extends Result
+  case class Event()
 }

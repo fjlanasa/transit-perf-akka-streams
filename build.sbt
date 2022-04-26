@@ -31,9 +31,10 @@ val AkkaVersion = "2.6.13"
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 libraryDependencies += "com.typesafe.akka" %% "akka-stream" % AkkaVersion
 libraryDependencies += "com.typesafe.akka" %% "akka-stream-typed" % AkkaVersion
-libraryDependencies += "com.google.transit" % "gtfs-realtime-bindings" % "0.0.4"
 libraryDependencies += "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion
 libraryDependencies += "com.typesafe.akka" %% "akka-actor-testkit-typed" % AkkaVersion % Test
+libraryDependencies += "com.google.transit" % "gtfs-realtime-bindings" % "0.0.4"
+libraryDependencies += "com.univocity" % "univocity-parsers" % "2.9.1"
 
 // Here, `libraryDependencies` is a set of dependencies, and by using `+=`,
 // we're adding the scala-parser-combinators dependency to the set of dependencies

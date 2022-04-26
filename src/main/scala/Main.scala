@@ -3,10 +3,12 @@ import akka.NotUsed
 import akka.actor.typed.{Behavior, ActorSystem => TypedActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.stream.ClosedShape
-import sources.VehiclePositionSource
-import events.{DwellEvent, HeadwayEvent, StopStatusEvent}
-import flows.{DwellEventFlow, HeadwayEventFlow, StopStatusEventFlow}
+import vehicleposition.VehiclePositionSource
+import dwell.{DwellEvent, DwellEventFlow}
+import headway.{HeadwayEvent, HeadwayEventFlow}
+import stopstatus.{StopStatusEvent, StopStatusEventFlow}
 import akka.stream.scaladsl.Source
+import schedule.ScheduleState
 
 object Main extends App {
   def apply(): Behavior[NotUsed] = {
@@ -17,6 +19,10 @@ object Main extends App {
         context.spawn(StopStatusEvent(), "stop-status-event")
       val dwellEventActor = context.spawn(DwellEvent(), "dwell-event")
       val headwayEventActor = context.spawn(HeadwayEvent(), "headway-event")
+      val scheduleActor = context.spawn(
+        ScheduleState("https://cdn.mbta.com/MBTA_GTFS.zip"),
+        "schedule"
+      )
 
       val graph = GraphDSL.create() {
         implicit builder: GraphDSL.Builder[NotUsed] =>
@@ -24,15 +30,23 @@ object Main extends App {
 
           val vehiclePositionSource = builder.add(
             VehiclePositionSource(
-              "https://cdn.mbta.com/realtime/VehiclePositions.pb"
+              "https://cdn.mbta.com/realtime/VehiclePositions.pb",
+              scheduleActor
             )
           )
-          val vehiclePositionBroadcast = builder.add(Broadcast[VehiclePositionSource.VehiclePosition](2))
+          val vehiclePositionBroadcast =
+            builder.add(Broadcast[VehiclePositionSource.VehiclePosition](2))
           val vehiclePositionSink =
-            builder.add(Sink.foreach[VehiclePositionSource.VehiclePosition]((x: VehiclePositionSource.VehiclePosition) => {}))
+            builder.add(
+              Sink.foreach[VehiclePositionSource.VehiclePosition](
+                (x: VehiclePositionSource.VehiclePosition) => {
+                  println(s"Vehicle Position: $x")
+                }
+              )
+            )
 
           val stopStatusFlow = builder.add(
-            StopStatusEventFlow(stopStatusActor).flatMapConcat(x => Source(x))
+            StopStatusEventFlow(stopStatusActor)
           )
           val stopStatusBroadcast =
             builder.add(Broadcast[StopStatusEvent.Event](3))
@@ -43,9 +57,7 @@ object Main extends App {
           )
 
           val dwellEventFlow =
-            builder.add(DwellEventFlow(dwellEventActor).collect {
-              case result: DwellEvent.Event => result
-            })
+            builder.add(DwellEventFlow(dwellEventActor))
           val dwellEventSink = builder.add(
             Sink.foreach[DwellEvent.Event]((x: DwellEvent.Event) =>
               println(s"Dwell Event: $x")
@@ -53,9 +65,7 @@ object Main extends App {
           )
 
           val headwayEventFlow =
-            builder.add(HeadwayEventFlow(headwayEventActor).collect {
-              case result: HeadwayEvent.Event => result
-            })
+            builder.add(HeadwayEventFlow(headwayEventActor))
           val headwayEventSink = builder.add(
             Sink.foreach[HeadwayEvent.Event]((x: HeadwayEvent.Event) =>
               println(s"Headway Event: $x")

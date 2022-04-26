@@ -1,8 +1,9 @@
-package events
+package stopstatus
 
-import sources.VehiclePositionSource.{VehiclePosition}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+
+import vehicleposition.VehiclePositionSource.VehiclePosition
 
 object StopStatusEvent {
   case class Update(
@@ -79,7 +80,6 @@ object StopStatusEvent {
                 )
               )
             case ("IN_TRANSIT_TO", _) =>
-              println(previousVP, currentVP)
               message.replyTo ! List(
                 Arrival(
                   vehicleId = previousVP.vehicleId,
